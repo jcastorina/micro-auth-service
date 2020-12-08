@@ -1,0 +1,100 @@
+Auth Microservice by Joseph Castorina III
+
+This microservice is an API for accessing an auth DB implementation
+to CRUD a table consisting of username, hash, and salt.
+This is intended to loosely couple content servers with a single auth server.
+The DB model can be found in /lib/credentials.js
+
+The workflow goes as follows:
+
+1) Subscriber server issues POST request to endpoint "<auth_uri>/generate"
+with JSON:
+
+```
+Content-Type: application/json
+
+{
+  "name": <Your Subscriber Server's Name>, #isRequired
+  "passphrase": <Secret Phrase stored in process.env.JWT_PASSPHRASE> #isRequired
+}
+```
+
+Auth service will return code 201 and a JWT token <...token...>.
+"name" is embedded in token and can be retrieved with jwt.verify(token).
+
+Subscriber server can now access protected routes to CRUD the auth DB.
+
+
+2) Subscriber can forward registration data from its user agents for creation in auth DB
+Issue POST request along with JWT to endpoint "<auth_uri>/register":
+
+```
+Content-Type: application/json
+Authorization: Bearer <...token...>
+
+{
+  "username": <New User>, #isRequired
+  "password": <Password> #isRequired
+}
+```
+
+Auth service will return code 201 on success.
+
+3) Subscriber can forward login data from its user agents to validate credentials against auth DB records
+Issue POST request along with JWT to endpoint "<auth_uri>/login"
+
+```
+Content-Type: application/json
+Authorization: Bearer <...token...>
+
+{
+  "username": <New User>, #isRequired
+  "password": <Password> #isRequired
+}
+```
+
+Auth service will return code 200 on success.
+
+4) Subscriber can forward password change requests from its user agents to update records in auth DB.
+Issue POST request along with JWT to endpoint "<auth_uri>/change"
+
+```
+Content-Type: application/json
+Authorization: Bearer <...token...>
+
+{
+  "username": <New User>, #isRequired
+  "password": <Password> #isRequired
+}
+```
+
+Auth service will return code 201 on success.
+
+######################################################################
+
+This is currently designed to interface with a PostgreSQL DB Server.
+This service uses an ORM called Sequelize which can be reconfigured
+for an RDB of your choice.
+
+There are 6 environment variables you will need to include in a root-level .env file
+so that they can be imported with require('dotenv').configure():
+
+DB_USER (DB username)
+DB_PASS (DB password)
+DB_HOST (DB URI)
+PATH_PRIVKEY (RS256 priv key in local filesystem)
+PATH_PUBKEY (RS256 pub key in local filesystem)
+JWT_PASSPHRASE (string-based passphrase to generate password)
+
+You will also need to generate your own keys.  Here is a great gist on the topic:
+
+https://gist.github.com/ygotthilf/baa58da5c3dd1f69fae9
+
+Here is an example .env file:
+
+DB_USER = 'dbadmin'
+DB_PASS = 'dbpassword'
+DB_HOST = '<URI of DB server>'
+PATH_PRIVKEY = './ssl/privkeyname.key'
+PATH_PUBKEY = './ssl/pubkeyname.key.pub'
+JWT_PASSPHRASE = 'YourSuperSecretPassphrase'
